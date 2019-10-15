@@ -84,6 +84,7 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("InvalidWakeLockTag")
     fun lock(view: View) {
 
+        // 20 秒内没有触摸，则 20 秒后熄灭；若有触摸，从触摸时开始，按系统时间熄灭
         wakeLock?.acquire(20 * 1000)
 
         Toast.makeText(this, "20 秒息屏", Toast.LENGTH_LONG).show()
