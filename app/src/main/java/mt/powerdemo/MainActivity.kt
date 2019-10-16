@@ -1,31 +1,18 @@
 package mt.powerdemo
 
-import android.Manifest
 import android.annotation.SuppressLint
-import android.app.AlertDialog
-import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
-import android.os.PowerManager
-import android.content.Context.POWER_SERVICE
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.CountDownTimer
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat.getSystemService
 import kotlinx.android.synthetic.main.activity_main.*
 import java.lang.Exception
-import androidx.core.content.ContextCompat
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
-    var wakeLock: PowerManager.WakeLock? = null
     var mTimer = Timer()
 
     @SuppressLint("SetTextI18n")
@@ -35,13 +22,12 @@ class MainActivity : AppCompatActivity() {
 
         showScreenOffTime()
 
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, packageName + "wakeLock")
+        WakeManager.createInstance(this)
     }
 
     private fun showScreenOffTime() {
         val screenOffTime = getScreenOffTime()
-        if (screenOffTime == -1) {
+        if (screenOffTime == -1L) {
             sysScreenOffTime.setText("当前系统息屏时长：" + "永不休眠")
         }
         val screenTime = (getScreenOffTime().div(1000))
@@ -58,7 +44,9 @@ class MainActivity : AppCompatActivity() {
             override fun run() {
                 //要执行的代码
                 runOnUiThread {
-                    timerTV.setText("已经亮屏：" + (++time) + "秒")
+                    val wakeTime = ++time
+                    timerTV.setText("已经亮屏：" + wakeTime + "秒")
+                    Log.e("MainActivity", "已经亮屏：" + wakeTime + "秒");
                 }
             }
         }
@@ -66,7 +54,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun always(view: View) {
-        wakeLock?.acquire()
+        WakeManager.getInstance().alwaysWake()
 
         Toast.makeText(this, "常亮", Toast.LENGTH_LONG).show()
 
@@ -74,7 +62,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun release(view: View) {
-        wakeLock?.release()
+        WakeManager.getInstance().releaseWake()
 
         Toast.makeText(this, "释放", Toast.LENGTH_LONG).show()
 
@@ -84,28 +72,33 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("InvalidWakeLockTag")
     fun lock(view: View) {
 
-        // 20 秒内没有触摸，则 20 秒后熄灭；若有触摸，从触摸时开始，按系统时间熄灭
-        wakeLock?.acquire(20 * 1000)
+        WakeManager.getInstance().lock(10 * 1000 + getScreenOffTime())
 
-        Toast.makeText(this, "20 秒息屏", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "30 秒之后交由系统处理", Toast.LENGTH_LONG).show()
 
+        showTimer()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        WakeManager.getInstance().onResume()
         showTimer()
     }
 
     override fun onPause() {
         super.onPause()
-        if (wakeLock != null && wakeLock?.isHeld!!) {
-            wakeLock?.release()
-        }
+        WakeManager.getInstance().onPause()
+        WakeManager.getInstance().releaseWake()
+        mTimer.cancel()
     }
 
     /**
      * 获得休眠时间 毫秒
      */
-    fun getScreenOffTime(): Int {
-        var screenOffTime = 0;
+    fun getScreenOffTime(): Long {
+        var screenOffTime = 0L;
         try {
-            screenOffTime = Settings.System.getInt(
+            screenOffTime = Settings.System.getLong(
                 getContentResolver(),
                 Settings.System.SCREEN_OFF_TIMEOUT
             );

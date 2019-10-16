@@ -52,7 +52,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="52dp"
-        android:text="二十秒息屏"
+        android:text="控制息屏"
         android:onClick="lock"
         app:layout_constraintStart_toStartOf="@+id/always"
         app:layout_constraintTop_toBottomOf="@+id/always" />
