@@ -17,13 +17,12 @@ import java.lang.Exception
 class WakeManager private constructor(context: Activity) {
     var wakeLock: PowerManager.WakeLock? = null
     var powerManager: PowerManager? = null
-    var wakeMode: WakeMode = WakeMode.LOCK
+    var wakeMode: WakeMode = WakeMode.DEFAULT
     var handler: Handler = Handler()
     var runnable: Runnable = object : Runnable {
         override fun run() {
             Log.e(TAG, "runnable: ");
             releaseWake()
-//            handler.removeCallbacks(this)
             pauseTime = 0
             startTime = 0
         }
@@ -68,14 +67,14 @@ class WakeManager private constructor(context: Activity) {
     /**
      * 不息屏
      */
-    fun alwaysWake() {
+    private fun alwaysWake() {
         acquire()
     }
 
     /**
      * 交由系统管理
      */
-    fun releaseWake() {
+    private fun releaseWake() {
         if (wakeLock != null && wakeLock?.isHeld!!) {
             wakeLock?.release()
         }
@@ -99,23 +98,28 @@ class WakeManager private constructor(context: Activity) {
             WakeMode.SYSTEM -> {
                 // do nothing
             }
+            WakeMode.DEFAULT -> {
+                lock(timeOut)
+            }
         }
     }
 
     /**
      * 获取 wakeLock
      */
-    fun acquire() {
+    private fun acquire() {
         wakeLock?.acquire()
     }
 
     /**
      * 隔 timeOut 时间之后交由系统处理。
      */
-    fun lock(timeOut: Long) {
+    private fun lock(timeOut: Long) {
+        Log.e(TAG, "lock: " + timeOut);
         this.timeOut = timeOut
         startTime = System.currentTimeMillis()
         acquire()
+        handler.removeCallbacks(runnable)
         handler.postDelayed(runnable, timeOut)
     }
 
@@ -124,6 +128,7 @@ class WakeManager private constructor(context: Activity) {
             pauseTime = System.currentTimeMillis()
             handler.removeCallbacks(runnable)
         }
+        releaseWake()
     }
 
     fun setMode(mode: WakeMode, timeOut: Long) {
@@ -152,5 +157,5 @@ class WakeManager private constructor(context: Activity) {
 }
 
 enum class WakeMode {
-    ALWAYS, SYSTEM, LOCK
+    ALWAYS, SYSTEM, LOCK, DEFAULT
 }

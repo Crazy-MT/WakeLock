@@ -90,7 +90,6 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         WakeManager.getInstance().onPause()
-        WakeManager.getInstance().releaseWake()
         mTimer.cancel()
     }
 
