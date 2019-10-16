@@ -4,7 +4,9 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.PowerManager
+import android.provider.Settings
 import android.util.Log
+import java.lang.Exception
 
 /**
  *  @author : MaoTong
@@ -17,9 +19,14 @@ class WakeManager private constructor(context: Activity) {
     var powerManager: PowerManager? = null
     var wakeMode: WakeMode = WakeMode.LOCK
     var handler: Handler = Handler()
-    var runnable: Runnable = Runnable {
-        Log.e(TAG, "runnable: ");
-        releaseWake()
+    var runnable: Runnable = object : Runnable {
+        override fun run() {
+            Log.e(TAG, "runnable: ");
+            releaseWake()
+//            handler.removeCallbacks(this)
+            pauseTime = 0
+            startTime = 0
+        }
     }
 
     var pauseTime: Long = 0
@@ -30,6 +37,7 @@ class WakeManager private constructor(context: Activity) {
         powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager?.newWakeLock(PowerManager.FULL_WAKE_LOCK, context.packageName + "wakeLock")
         wakeLock?.setReferenceCounted(false)
+        timeOut = 20 * 1000 + getScreenOffTime(context)
     }
 
     companion object{
@@ -61,7 +69,6 @@ class WakeManager private constructor(context: Activity) {
      * 不息屏
      */
     fun alwaysWake() {
-        wakeMode = WakeMode.ALWAYS
         acquire()
     }
 
@@ -103,12 +110,11 @@ class WakeManager private constructor(context: Activity) {
     }
 
     /**
-     * 隔 timeOut 时间之后交由系统处理
+     * 隔 timeOut 时间之后交由系统处理。
      */
     fun lock(timeOut: Long) {
         this.timeOut = timeOut
         startTime = System.currentTimeMillis()
-        wakeMode = WakeMode.LOCK
         acquire()
         handler.postDelayed(runnable, timeOut)
     }
@@ -118,6 +124,30 @@ class WakeManager private constructor(context: Activity) {
             pauseTime = System.currentTimeMillis()
             handler.removeCallbacks(runnable)
         }
+    }
+
+    fun setMode(mode: WakeMode, timeOut: Long) {
+        wakeMode = mode
+        when(wakeMode) {
+            WakeMode.ALWAYS -> {alwaysWake()}
+            WakeMode.SYSTEM -> {releaseWake()}
+            WakeMode.LOCK -> {lock(timeOut)}
+        }
+    }
+    /**
+     * 获得休眠时间 毫秒
+     */
+    fun getScreenOffTime(context: Activity): Long {
+        var screenOffTime = 0L;
+        try {
+            screenOffTime = Settings.System.getLong(
+                context.getContentResolver(),
+                Settings.System.SCREEN_OFF_TIMEOUT
+            );
+        } catch (localException: Exception) {
+            localException.printStackTrace()
+        }
+        return screenOffTime;
     }
 }
 

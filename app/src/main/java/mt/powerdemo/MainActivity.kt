@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun always(view: View) {
-        WakeManager.getInstance().alwaysWake()
+        WakeManager.getInstance().setMode(WakeMode.ALWAYS, -1)
 
         Toast.makeText(this, "常亮", Toast.LENGTH_LONG).show()
 
@@ -62,7 +62,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun release(view: View) {
-        WakeManager.getInstance().releaseWake()
+        WakeManager.getInstance().setMode(WakeMode.SYSTEM, -1)
 
         Toast.makeText(this, "释放", Toast.LENGTH_LONG).show()
 
@@ -72,7 +72,9 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("InvalidWakeLockTag")
     fun lock(view: View) {
 
-        WakeManager.getInstance().lock(10 * 1000 + getScreenOffTime())
+        // 前 20 * 1000 秒之内，触摸屏幕，屏幕仍会在 20 * 1000 + systemTime 熄灭；
+        // 超过 20 * 1000 秒，触摸屏幕，屏幕息屏时间会从触摸屏幕开始顺延到 systemTime 时间熄灭
+        WakeManager.getInstance().setMode(WakeMode.LOCK, 20 * 1000 + getScreenOffTime())
 
         Toast.makeText(this, "30 秒之后交由系统处理", Toast.LENGTH_LONG).show()
 
